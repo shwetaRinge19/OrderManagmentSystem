@@ -1,0 +1,492 @@
+﻿@using OrderManagementSystem_Core.Models.OrderListModel
+@model List<OrderListModel>
+
+@{
+    ViewData["Title"] = "Order Management";
+}
+
+<style>
+    /* ===== SAFE PREMIUM STYLING ===== */
+    .page-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 2px 10px rgba(0,0,0,.08);
+    }
+
+    .form-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6c757d;
+        text-transform: uppercase;
+    }
+
+    /* ===== TOTAL BAR ===== */
+    .total-summary {
+        background: linear-gradient(90deg, #198754, #157347);
+        color: #fff;
+        padding: 12px 20px;
+        border-radius: 10px;
+        font-size: 1rem;
+        font-weight: 600;
+        display: inline-block;
+        min-width: 260px;
+        text-align: center;
+    }
+
+    /* ===== TABLE ===== */
+    .table th {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+    }
+
+    .modal-content {
+        border-radius: 14px;
+    }
+</style>
+
+<div class="page-card">
+
+    <h5 class="mb-3">Order Management</h5>
+
+    <!-- ================= FILTER BAR ================= -->
+    <form method="get" class="mb-3 p-3 bg-light rounded">
+
+        <div class="row g-3 align-items-end">
+
+            <!-- Agency -->
+            <div class="col-md-3">
+                <label class="form-label">Agency</label>
+                <div class="d-flex gap-2">
+                    <select name="agencyId"
+                            class="form-select form-select-sm"
+                            onchange="this.form.submit()">
+                        <option value="">Select Agency</option>
+                        @foreach (var agency in ViewBag.Agencies)
+                        {
+                            <option value="@agency.Id"
+                                    selected="@(ViewBag.SelectedAgencyId == agency.Id)">
+                                @agency.AgencyName
+                            </option>
+                        }
+                    </select>
+
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-sm"
+                            data-bs-toggle="modal"
+                            data-bs-target="#agencyModal">
+                        +
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dates -->
+            <div class="col-md-2">
+                <label class="form-label">From Date</label>
+                <input type="date" name="fromDate"
+                       value="@ViewBag.FromDate"
+                       class="form-control form-control-sm" />
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">To Date</label>
+                <input type="date" name="toDate"
+                       value="@ViewBag.ToDate"
+                       class="form-control form-control-sm" />
+            </div>
+
+            <!-- ACTION BUTTONS -->
+            <div class="col-md-5 text-end">
+                <button class="btn btn-primary btn-sm px-4 me-2">
+                    Search
+                </button>
+
+                <a class="btn btn-outline-danger btn-sm px-4 me-2"
+                   target="_blank"
+                   href="@Url.Action("ExportPdf","OrderList",new{
+                        agencyId=ViewBag.SelectedAgencyId,
+                        fromDate=ViewBag.FromDate,
+                        toDate=ViewBag.ToDate
+                   })">
+                    Export PDF
+                </a>
+
+                <button type="button"
+                        class="btn btn-success btn-sm px-4"
+                        data-bs-toggle="modal"
+                        data-bs-target="#billModal"
+                        @(ViewBag.SelectedAgencyId == null ? "disabled" : "")>
+                    + New Bill
+                </button>
+            </div>
+
+        </div>
+    </form>
+
+    <!-- ================= TOTAL ================= -->
+    @if (Model.Any())
+    {
+        <div class="d-flex justify-content-end mb-3">
+            <div class="total-summary">
+                Total Bill Amount : ₹ @ViewBag.GrandTotal
+            </div>
+        </div>
+    }
+
+    <!-- ================= ORDER LIST ================= -->
+    @if (Model.Any())
+    {
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Bill No</th>
+                    <th>Date</th>
+                    <th>Total Amount</th>
+                    <th class="text-center">Details</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var order in Model)
+                {
+                    <tr>
+                        <td>@order.BillNo</td>
+                        <td>@order.BillDate?.ToString("dd-MM-yyyy")</td>
+                        <td>₹ @order.TotalAmount</td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-primary"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#d_@order.Id">
+                                View
+                            </button>
+                        </td>
+                    </tr>
+
+                    <tr class="collapse bg-light" id="d_@order.Id">
+                        <td colspan="4">
+                            <table class="table table-sm mt-2">
+                                <thead class="table-warning text-center">
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Qty</th>
+                                        <th>Rate</th>
+                                        <th>Disc %</th>
+                                        <th>Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-center">
+                                    @foreach (var item in order.SalesDetail)
+                                    {
+                                        <tr>
+                                            <td>@item.ItemName</td>
+                                            <td>@item.Quantity</td>
+                                            <td>@item.Rate</td>
+                                            <td>@item.DiscountRate</td>
+                                            <td>@item.Amount</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else if (ViewBag.SelectedAgencyId != null)
+    {
+        <p class="text-muted">No orders found.</p>
+    }
+</div>
+
+<!-- ================= AGENCY MODAL ================= -->
+<div class="modal fade" id="agencyModal">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-controller="Agency" asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="modal-header">
+                    <h6 class="modal-title">Add Agency</h6>
+                    <button class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <input name="agencyName"
+                           class="form-control"
+                           placeholder="Agency Name"
+                           required />
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-primary btn-sm px-4">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- ================= BILL MODAL ================= -->
+<div class="modal fade" id="billModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+
+            <form asp-controller="OrderList" asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+
+                <input type="hidden"
+                       name="AgencyId"
+                       value="@ViewBag.SelectedAgencyId" />
+
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">Create Bill</h5>
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Bill No</label>
+                            <input name="BillNo"
+                                   value="@ViewBag.BillNo"
+                                   class="form-control form-control-sm"
+                                   readonly />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Bill Date</label>
+                            <input type="date"
+                                   name="BillDate"
+                                   value="@DateTime.Now.ToString("yyyy-MM-dd")"
+                                   class="form-control form-control-sm" />
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered align-middle text-center">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="150">Item</th>
+                                    <th width="80">Qty</th>
+                                    <th width="100">Rate</th>
+                                    <th width="90">Disc %</th>
+                                    <th width="110">Amount</th>
+                                    <th width="40"></th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="itemBody">
+                                <tr>
+                                    <td><input name="SalesDetail[0].ItemName" class="form-control form-control-sm" required /></td>
+                                    <td><input name="SalesDetail[0].Quantity" min="1" type="number" class="form-control form-control-sm" oninput="calc(this)" required /></td>
+                                    <td><input name="SalesDetail[0].Rate" min="0" type="number" step="0.01" class="form-control form-control-sm" oninput="calc(this)" required /></td>
+                                    <td><input name="SalesDetail[0].DiscountRate" type="number" step="0.01" min="0" max="100" class="form-control form-control-sm" oninput="calc(this)" /></td>
+                                    <td><input name="SalesDetail[0].Amount" class="form-control form-control-sm" readonly /></td>
+                                    <td>
+                                        <button type="button"
+                                                class="btn btn-sm btn-danger"
+                                                onclick="removeRow(this)">
+                                            ✕
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <button type="button"
+                            class="btn btn-outline-primary btn-sm"
+                            onclick="addRow()">
+                        + Add Item
+                    </button>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit"
+                            class="btn btn-success btn-sm px-4"
+                            onclick="return validateBillForm();">
+                        Save Bill
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ================= STATUS MODAL ================= -->
+<div class="modal fade" id="statusModal" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content text-center">
+
+            <div class="modal-body py-4">
+                <div id="statusIcon" class="mb-3 fs-1"></div>
+                <h6 id="statusMessage"></h6>
+            </div>
+
+            <div class="modal-footer justify-content-center">
+                <button type="button"
+                        class="btn btn-primary btn-sm px-4"
+                        data-bs-dismiss="modal">
+                    OK
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+<input type="hidden" id="billStatus" value="@TempData["BillStatus"]" />
+<input type="hidden" id="billMessage" value="@TempData["BillMessage"]" />
+
+@section Scripts {
+<script>
+
+    document.addEventListener("DOMContentLoaded", function () {
+        debugger
+        const status = document.getElementById("billStatus")?.value;
+        const message = document.getElementById("billMessage")?.value;
+
+        if (!status || status === "") return;
+
+        const icon = document.getElementById("statusIcon");
+        const msg = document.getElementById("statusMessage");
+
+        if (status === "success") {
+            icon.innerHTML = "✅";
+            msg.innerText = message || "Operation completed successfully.";
+        }
+        else {
+            icon.innerHTML = "❌";
+            msg.innerText = message || "Something went wrong.";
+        }
+
+        const modalElement = document.getElementById("statusModal");
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+    });
+
+    let rowIndex = 1;
+
+    function addRow() {
+        const body = document.getElementById("itemBody");
+        if (!body) return;
+
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+            <td>
+                <input name="SalesDetail[${rowIndex}].ItemName"
+                       class="form-control form-control-sm" required />
+            </td>
+            <td>
+                <input name="SalesDetail[${rowIndex}].Quantity"
+                       type="number"
+                       min="1"
+                       class="form-control form-control-sm"
+                       oninput="calc(this)"
+                       required />
+            </td>
+            <td>
+                <input name="SalesDetail[${rowIndex}].Rate"
+                       type="number"
+                       step="0.01"
+                       min="0"
+                       class="form-control form-control-sm"
+                       oninput="calc(this)"
+                       required />
+            </td>
+            <td>
+                <input name="SalesDetail[${rowIndex}].DiscountRate"
+                       type="number"
+                       step="0.01"
+                       min="0"
+                       max="100"
+                       class="form-control form-control-sm"
+                       oninput="calc(this)" />
+            </td>
+
+            <td>
+                <input name="SalesDetail[${rowIndex}].Amount"
+                       class="form-control form-control-sm"
+                       readonly />
+            </td>
+            <td>
+                <button type="button"
+                        class="btn btn-sm btn-danger"
+                        onclick="removeRow(this)">
+                    ✕
+                </button>
+            </td>
+        `;
+
+        body.appendChild(row);
+        rowIndex++;
+    }
+
+    function removeRow(btn) {
+        const row = btn.closest("tr");
+        if (!row) return;
+        row.remove();
+    }
+
+    function calc(el) {
+        const row = el.closest("tr");
+        if (!row) return;
+
+        const qty = parseFloat(row.children[1].querySelector("input").value) || 0;
+        const rate = parseFloat(row.children[2].querySelector("input").value) || 0;
+        const disc = parseFloat(row.children[3].querySelector("input").value) || 0;
+
+        const gross = qty * rate;
+        const discount = (gross * disc) / 100;
+        const amount = gross - discount;
+
+        row.children[4].querySelector("input").value = amount.toFixed(2);
+    }
+    function validateBillForm() {
+    const rows = document.querySelectorAll("#itemBody tr");
+
+    if (rows.length === 0) {
+        alert("Please add at least one item.");
+        return false;
+    }
+
+    for (let i = 0; i < rows.length; i++) {
+        const qtyInput = rows[i].children[1].querySelector("input");
+        const rateInput = rows[i].children[2].querySelector("input");
+        const discInput = rows[i].children[3].querySelector("input");
+
+        const qty = parseFloat(qtyInput.value);
+        const rate = parseFloat(rateInput.value);
+        const disc = parseFloat(discInput.value) || 0;
+
+        // Quantity validation
+        if (!qty || qty <= 0) {
+            alert(`Row ${i + 1}: Quantity is mandatory and must be greater than 0.`);
+            qtyInput.focus();
+            return false;
+        }
+
+        // Rate validation (mandatory, no max)
+        if (isNaN(rate)) {
+            alert(`Row ${i + 1}: Rate is mandatory.`);
+            rateInput.focus();
+            return false;
+        }
+
+        // Discount validation
+        if (disc < 0 || disc > 100) {
+            alert(`Row ${i + 1}: Discount percentage must be between 0 and 100.`);
+            discInput.focus();
+            return false;
+        }
+    }
+
+    return true; // allow submit
+}
+
+</script>
+}

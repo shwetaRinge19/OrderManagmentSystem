@@ -1,0 +1,182 @@
+﻿@using OrderManagementSystem_Core.Models.OrderListModel
+@model OrderReportPdfVM
+
+@{
+    Layout = null;
+}
+
+<style>
+    body {
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        font-size: 11px;
+        color: #222;
+        margin: 0;
+        padding: 16px;
+    }
+
+
+    /* ===== HEADER ===== */
+    .header {
+        border-bottom: 2px solid #198754;
+        padding-bottom: 10px;
+        margin-bottom: 16px;
+    }
+
+    .store-name {
+        font-size: 21px;
+        font-weight: 700;
+        text-align: center;
+        color: #198754;
+        letter-spacing: .3px;
+    }
+
+    .agency-name {
+        text-align: center;
+        font-size: 14px;
+        margin-top: 3px;
+        font-weight: 600;
+    }
+
+    .date-range {
+        text-align: center;
+        font-size: 11px;
+        color: #555;
+        margin-top: 3px;
+    }
+
+    /* ===== SUMMARY ===== */
+    .summary {
+        width: 100%;
+        margin: 14px 0 20px;
+        border-collapse: collapse;
+        font-size: 12px;
+    }
+
+    .summary td {
+        padding: 9px 10px;
+        border: 1px solid #ddd;
+        font-weight: 600;
+    }
+
+    .summary .label {
+        background: #f6f6f6;
+        width: 22%;
+    }
+
+    .summary .total {
+        background: #198754;
+        color: #fff;
+        font-size: 15px;
+        font-weight: 700;
+        text-align: right;
+        letter-spacing: .4px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* ===== BILL BLOCK ===== */
+    .bill {
+        margin-bottom: 18px;
+        page-break-inside: avoid;
+    }
+
+    .bill-header {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 6px;
+        font-size: 11px;
+    }
+
+    .bill-header td {
+        padding: 7px 8px;
+        font-weight: 600;
+        background: #f2f2f2;
+        border: 1px solid #ddd;
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* ===== ITEM TABLE ===== */
+    .items {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 15px;
+    }
+
+    .items th {
+        background: #fafafa;
+        border-bottom: 1px solid #bbb;
+        padding: 7px 6px;
+        font-weight: 700;
+        text-align: left;
+    }
+
+    .items td {
+        padding: 6px;
+        border-bottom: 1px solid #eee;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .right {
+        text-align: right;
+    }
+
+</style>
+
+
+<!-- ================= HEADER ================= -->
+<div class="header">
+    <div class="store-name">Keshav Medical Store</div>
+    @* <div class="agency-name">Agency: @Model.AgencyName</div> *@
+    <div class="date-range">
+        Period: @Model.FromDate &nbsp; to &nbsp; @Model.ToDate
+    </div>
+</div>
+
+<!-- ================= SUMMARY ================= -->
+<table class="summary">
+    <tr>
+        <td class="label">Agency</td>
+        <td>@Model.AgencyName</td>
+        <td class="label">Total Bill Amount</td>
+        <td class="total">₹ @Model.GrandTotal</td>
+    </tr>
+</table>
+
+<!-- ================= BILLS ================= -->
+@foreach (var order in Model.Orders)
+{
+    <div class="bill">
+
+        <table class="bill-header">
+            <tr>
+                <td>Bill No: @order.BillNo</td>
+                <td>Date: @order.BillDate?.ToString("dd-MM-yyyy")</td>
+                <td class="right">Bill Total: ₹ @order.TotalAmount</td>
+            </tr>
+        </table>
+
+        <table class="items">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th class="right">Qty</th>
+                    <th class="right">Rate</th>
+                    <th class="right">Disc %</th>
+                    <th class="right">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var d in order.SalesDetail)
+                {
+                    <tr>
+                        <td>@d.ItemName</td>
+                        <td class="right">@d.Quantity</td>
+                        <td class="right">@d.Rate</td>
+                        <td class="right">@d.DiscountRate</td>
+                        <td class="right">@d.Amount</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+    </div>
+}

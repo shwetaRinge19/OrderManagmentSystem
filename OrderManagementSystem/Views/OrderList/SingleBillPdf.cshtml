@@ -1,0 +1,61 @@
+﻿@using OrderManagementSystem_Core.Models.OrderListModel
+@model SingleBillPdfVM
+
+<div style="width:100%; font-family:Arial; font-size:15px;">
+
+    <!-- Header -->
+    <div style="text-align:center; margin-bottom:4px;">
+        <h2 style="margin:0;">Keshav Medical Store</h2>
+        <div style="font-weight:bold;">TAX INVOICE</div>
+    </div>
+
+    <hr style="margin:5px 0;" />
+
+    <!-- Bill Info -->
+    <table width="100%" style="margin-bottom:6px;">
+        <tr>
+            <td><b>Bill No:</b> @Model.Order.BillNo</td>
+            <td><b>Customer Name:</b> @Model.Order.CustomerName</td>
+            <td style="text-align:right;">
+                <b>Date:</b> @Model.Order.BillDate?.ToString("dd-MM-yyyy")
+            </td>
+        </tr>
+    </table>
+
+    <!-- Items Table -->
+    <table width="100%" border="1" cellspacing="0" cellpadding="6">
+        <thead style="background:#f3f3f3;">
+            <tr>
+                <th width="55%">Item</th>
+                <th width="15%">Qty</th>
+                <th width="30%">Amount</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @foreach (var item in Model.Order.SalesDetail)
+            {
+                <tr>
+                    <td>@item.ItemName</td>
+                    <td style="text-align:center">@item.Quantity</td>
+                    <td style="text-align:right">@item.Amount?.ToString("0.00")</td>
+                </tr>
+            }
+
+            <!-- Total inside table -->
+            <tr>
+                <td colspan="2" style="text-align:right;"><b>Total</b></td>
+                <td style="text-align:right;">
+                    <b>₹ @Model.Order.TotalAmount?.ToString("0.00")</b>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Signature -->
+    <div style="margin-top:30px; text-align:right;">
+        Authorized Signatory
+    </div>
+
+</div>
+

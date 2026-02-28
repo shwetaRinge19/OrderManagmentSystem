@@ -9,12 +9,11 @@ namespace OrderManagementSystem_Core.Models.OrderListModel
     public class OrderListModel
     {
         public int Id { get; set; }
+        public string? CustomerName { get; set; }
 
         public string? BillNo { get; set; }
 
         public DateTime? BillDate { get; set; }
-
-        public int? AgencyId { get; set; }
 
         public decimal? TotalAmount { get; set; }
 
@@ -27,6 +26,8 @@ namespace OrderManagementSystem_Core.Models.OrderListModel
     {
         public int Id { get; set; }
 
+        public int? AgencyId { get; set; }
+        public string? AgencyName { get; set; }
         public int? SalesId { get; set; }
 
         public string? ItemName { get; set; }

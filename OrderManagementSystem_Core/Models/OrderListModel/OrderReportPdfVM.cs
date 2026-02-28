@@ -8,7 +8,6 @@ namespace OrderManagementSystem_Core.Models.OrderListModel
 {
     public class OrderReportPdfVM
     {
-        public string AgencyName { get; set; }
         public string FromDate { get; set; }
         public string ToDate { get; set; }
 

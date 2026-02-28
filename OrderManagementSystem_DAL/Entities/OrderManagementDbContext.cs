@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 
-namespace OrderManagementSystem.Entities;
+namespace OrderManagementSystem_DAL.Entities;
 
 public partial class OrderManagementDbContext : DbContext
 {
@@ -43,6 +43,10 @@ public partial class OrderManagementDbContext : DbContext
             entity.Property(e => e.ItemName).HasMaxLength(200);
             entity.Property(e => e.Rate).HasColumnType("decimal(10, 2)");
 
+            entity.HasOne(d => d.Agency).WithMany(p => p.SalesDetails)
+                .HasForeignKey(d => d.AgencyId)
+                .HasConstraintName("FK_SalesDetails_Agencies");
+
             entity.HasOne(d => d.Sales).WithMany(p => p.SalesDetails)
                 .HasForeignKey(d => d.SalesId)
                 .HasConstraintName("FK__SalesDeta__Sales__3B75D760");
@@ -61,11 +65,8 @@ public partial class OrderManagementDbContext : DbContext
             entity.Property(e => e.CreatedOn)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
+            entity.Property(e => e.CustomerName).HasMaxLength(100);
             entity.Property(e => e.TotalAmount).HasColumnType("decimal(10, 2)");
-
-            entity.HasOne(d => d.Agency).WithMany(p => p.SalesMasters)
-                .HasForeignKey(d => d.AgencyId)
-                .HasConstraintName("FK_SalesMaster_Agencies");
         });
 
         OnModelCreatingPartial(modelBuilder);

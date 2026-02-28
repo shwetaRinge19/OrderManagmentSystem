@@ -50,78 +50,71 @@
     <h5 class="mb-3">Order Management</h5>
 
     <!-- ================= FILTER BAR ================= -->
-    <form method="get" class="mb-3 p-3 bg-light rounded">
+    <form method="get" class="card shadow-sm mb-3">
+    <div class="card-body">
 
-        <div class="row g-3 align-items-end">
+        <div class="row align-items-end g-3">
 
-            <!-- Agency -->
-            <div class="col-md-3">
-                <label class="form-label">Agency</label>
-                <div class="d-flex gap-2">
-                    <select name="agencyId"
-                            class="form-select form-select-sm"
-                            onchange="this.form.submit()">
-                        <option value="">Select Agency</option>
-                        @foreach (var agency in ViewBag.Agencies)
-                        {
-                            <option value="@agency.Id"
-                                    selected="@(ViewBag.SelectedAgencyId == agency.Id)">
-                                @agency.AgencyName
-                            </option>
-                        }
-                    </select>
-
-                    <button type="button"
-                            class="btn btn-outline-secondary btn-sm"
-                            data-bs-toggle="modal"
-                            data-bs-target="#agencyModal">
-                        +
-                    </button>
-                </div>
-            </div>
-
-            <!-- Dates -->
+            <!-- DATE FILTERS -->
             <div class="col-md-2">
-                <label class="form-label">From Date</label>
-                <input type="date" name="fromDate"
+                <label class="form-label small fw-semibold">From Date</label>
+                <input type="date"
+                       name="fromDate"
                        value="@ViewBag.FromDate"
                        class="form-control form-control-sm" />
             </div>
 
             <div class="col-md-2">
-                <label class="form-label">To Date</label>
-                <input type="date" name="toDate"
+                <label class="form-label small fw-semibold">To Date</label>
+                <input type="date"
+                       name="toDate"
                        value="@ViewBag.ToDate"
                        class="form-control form-control-sm" />
             </div>
 
-            <!-- ACTION BUTTONS -->
-            <div class="col-md-5 text-end">
-                <button class="btn btn-primary btn-sm px-4 me-2">
-                    Search
-                </button>
-
-                <a class="btn btn-outline-danger btn-sm px-4 me-2"
-                   target="_blank"
-                   href="@Url.Action("ExportPdf","OrderList",new{
-                        agencyId=ViewBag.SelectedAgencyId,
-                        fromDate=ViewBag.FromDate,
-                        toDate=ViewBag.ToDate
-                   })">
-                    Export PDF
-                </a>
-
-                <button type="button"
-                        class="btn btn-success btn-sm px-4"
-                        data-bs-toggle="modal"
-                        data-bs-target="#billModal"
-                        @(ViewBag.SelectedAgencyId == null ? "disabled" : "")>
-                    + New Bill
+            <!-- SEARCH -->
+            <div class="col-md-2">
+                <button class="btn btn-primary btn-sm w-100">
+                    <i class="bi bi-search me-1"></i> Search
                 </button>
             </div>
 
+            <!-- RIGHT ACTIONS -->
+            <div class="col-md-6 text-end">
+                <div class="btn-group" role="group">
+
+                    <a class="btn btn-outline-danger btn-sm px-3"
+                       target="_blank"
+                       href="@Url.Action("ExportPdf","OrderList",new{
+                           agencyId=ViewBag.SelectedAgencyId,
+                           fromDate=ViewBag.FromDate,
+                           toDate=ViewBag.ToDate
+                       })">
+                        <i class="bi bi-file-earmark-pdf me-1"></i> Export PDF
+                    </a>
+
+                    <button type="button"
+                            class="btn btn-success btn-sm px-3"
+                            data-bs-toggle="modal"
+                            data-bs-target="#billModal">
+                        <i class="bi bi-plus-circle me-1"></i> New Bill
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-outline-success btn-sm px-3"
+                            data-bs-toggle="modal"
+                            data-bs-target="#agencyModal">
+                        <i class="bi bi-building me-1"></i> Add Agency
+                    </button>
+
+                </div>
+            </div>
+
         </div>
-    </form>
+
+    </div>
+</form>
+
 
     <!-- ================= TOTAL ================= -->
     @if (Model.Any())
@@ -141,8 +134,9 @@
                 <tr>
                     <th>Bill No</th>
                     <th>Date</th>
+                    <th>Customer Name</th>
                     <th>Total Amount</th>
-                    <th class="text-center">Details</th>
+                    <th class="text-center">Actions</th>
                 </tr>
             </thead>
 
@@ -152,14 +146,29 @@
                     <tr>
                         <td>@order.BillNo</td>
                         <td>@order.BillDate?.ToString("dd-MM-yyyy")</td>
+                        <td>@order.CustomerName</td>
                         <td>₹ @order.TotalAmount</td>
                         <td class="text-center">
-                            <button class="btn btn-sm btn-outline-primary"
-                                    data-bs-toggle="collapse"
-                                    data-bs-target="#d_@order.Id">
-                                View
-                            </button>
-                        </td>
+
+    <div class="btn-group btn-group-sm">
+
+        <button class="btn btn-outline-primary"
+                data-bs-toggle="collapse"
+                data-bs-target="#d_@order.Id">
+            View
+        </button>
+
+       <a class="btn btn-outline-danger"
+           target="_blank"
+           href="@Url.Action("ExportSinglePdf","OrderList",
+                new { id = order.Id })">
+            PDF
+        </a>
+
+    </div>
+
+</td>
+
                     </tr>
 
                     <tr class="collapse bg-light" id="d_@order.Id">
@@ -168,6 +177,7 @@
                                 <thead class="table-warning text-center">
                                     <tr>
                                         <th>Item</th>
+                                        <th width="160">Agency</th>
                                         <th>Qty</th>
                                         <th>Rate</th>
                                         <th>Disc %</th>
@@ -179,6 +189,7 @@
                                     {
                                         <tr>
                                             <td>@item.ItemName</td>
+                                            <td>@item.AgencyName</td>
                                             <td>@item.Quantity</td>
                                             <td>@item.Rate</td>
                                             <td>@item.DiscountRate</td>
@@ -262,45 +273,114 @@
                                    value="@DateTime.Now.ToString("yyyy-MM-dd")"
                                    class="form-control form-control-sm" />
                         </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Customer Name</label>
+                            <input type="text"
+                                   name="CustomerName"
+                                   class="form-control form-control-sm" />
+                        </div>
                     </div>
 
                     <div class="table-responsive">
                         <table class="table table-sm table-bordered align-middle text-center">
                             <thead class="table-light">
-                                <tr>
-                                    <th width="150">Item</th>
-                                    <th width="80">Qty</th>
-                                    <th width="100">Rate</th>
-                                    <th width="90">Disc %</th>
-                                    <th width="110">Amount</th>
-                                    <th width="40"></th>
-                                </tr>
-                            </thead>
+    <tr>
+        <th width="150">Item</th>
+        <th width="160">Agency</th>   <!-- ✅ ADD THIS -->
+        <th width="80">Qty</th>
+        <th width="100">Rate</th>
+        <th width="90">Disc %</th>
+        <th width="110">Amount</th>
+        <th width="40"></th>
+    </tr>
+</thead>
+
 
                             <tbody id="itemBody">
                                 <tr>
-                                    <td><input name="SalesDetail[0].ItemName" class="form-control form-control-sm" required /></td>
-                                    <td><input name="SalesDetail[0].Quantity" min="1" type="number" class="form-control form-control-sm" oninput="calc(this)" required /></td>
-                                    <td><input name="SalesDetail[0].Rate" min="0" type="number" step="0.01" class="form-control form-control-sm" oninput="calc(this)" required /></td>
-                                    <td><input name="SalesDetail[0].DiscountRate" type="number" step="0.01" min="0" max="100" class="form-control form-control-sm" oninput="calc(this)" /></td>
-                                    <td><input name="SalesDetail[0].Amount" class="form-control form-control-sm" readonly /></td>
-                                    <td>
-                                        <button type="button"
-                                                class="btn btn-sm btn-danger"
-                                                onclick="removeRow(this)">
-                                            ✕
-                                        </button>
-                                    </td>
-                                </tr>
+    <td>
+        <input name="SalesDetail[0].ItemName"
+               class="form-control form-control-sm" required />
+    </td>
+
+    <td>
+        <select name="SalesDetail[0].AgencyId"
+                class="form-select form-select-sm">
+            <option value="">Select</option>
+            @foreach (var agency in ViewBag.Agencies)
+            {
+                <option value="@agency.Id">@agency.AgencyName</option>
+            }
+        </select>
+    </td>
+
+    <td>
+        <input name="SalesDetail[0].Quantity"
+               min="1"
+               type="number"
+               class="form-control form-control-sm"
+               oninput="calc(this)" required />
+    </td>
+
+    <td>
+        <input name="SalesDetail[0].Rate"
+               min="0"
+               type="number"
+               step="0.01"
+               class="form-control form-control-sm"
+               oninput="calc(this)" required />
+    </td>
+
+    <td>
+        <input name="SalesDetail[0].DiscountRate"
+               type="number"
+               step="0.01"
+               min="0"
+               max="100"
+               class="form-control form-control-sm"
+               oninput="calc(this)" />
+    </td>
+
+    <td>
+        <input name="SalesDetail[0].Amount"
+               class="form-control form-control-sm"
+               readonly />
+    </td>
+
+    <td>
+        <button type="button"
+                class="btn btn-sm btn-danger"
+                onclick="removeRow(this)">✕</button>
+    </td>
+</tr>
+
                             </tbody>
                         </table>
+                <!-- TOTAL ROW -->
+                    <div class="d-flex justify-content-end align-items-center 
+                                border-top px-3 py-2 bg-light">
+
+                        <span class="fw-semibold me-3">Total Amount</span>
+
+                        <input type="text"
+                               id="totalAmount"
+                               name="TotalAmount"
+                               class="form-control form-control-sm text-end fw-bold"
+                               style="max-width: 160px;"
+                               readonly />
                     </div>
 
-                    <button type="button"
-                            class="btn btn-outline-primary btn-sm"
-                            onclick="addRow()">
-                        + Add Item
-                    </button>
+                    </div>
+
+                    <div class="mt-3">
+                        <button type="button"
+                                class="btn btn-outline-primary btn-sm"
+                                onclick="addRow()">
+                            + Add Item
+                        </button>
+                    </div>
+
 
                 </div>
 
@@ -370,6 +450,14 @@
 
     let rowIndex = 1;
 
+    function getAgencyOptions() {
+    return `
+        ${Array.from(document.querySelectorAll("select[name='SalesDetail[0].AgencyId'] option"))
+            .map(o => `<option value="${o.value}">${o.text}</option>`)
+            .join("")}
+    `;
+}
+
     function addRow() {
         const body = document.getElementById("itemBody");
         if (!body) return;
@@ -377,10 +465,18 @@
         const row = document.createElement("tr");
 
         row.innerHTML = `
+
             <td>
                 <input name="SalesDetail[${rowIndex}].ItemName"
                        class="form-control form-control-sm" required />
             </td>
+            <td>
+    <select name="SalesDetail[${rowIndex}].AgencyId"
+            class="form-select form-select-sm">
+        <option value="">Select</option>
+        ${getAgencyOptions()}
+    </select>
+</td>
             <td>
                 <input name="SalesDetail[${rowIndex}].Quantity"
                        type="number"
@@ -426,25 +522,38 @@
         rowIndex++;
     }
 
-    function removeRow(btn) {
-        const row = btn.closest("tr");
-        if (!row) return;
-        row.remove();
-    }
-
     function calc(el) {
         const row = el.closest("tr");
         if (!row) return;
 
-        const qty = parseFloat(row.children[1].querySelector("input").value) || 0;
-        const rate = parseFloat(row.children[2].querySelector("input").value) || 0;
-        const disc = parseFloat(row.children[3].querySelector("input").value) || 0;
+        const qty = parseFloat(row.querySelector('[name$=".Quantity"]').value) || 0;
+        const rate = parseFloat(row.querySelector('[name$=".Rate"]').value) || 0;
+        const disc = parseFloat(row.querySelector('[name$=".DiscountRate"]').value) || 0;
 
-        const gross = qty * rate;
-        const discount = (gross * disc) / 100;
-        const amount = gross - discount;
+        let amount = qty * rate;
 
-        row.children[4].querySelector("input").value = amount.toFixed(2);
+        if (disc > 0) {
+            amount -= (amount * disc / 100);
+        }
+
+        row.querySelector('[name$=".Amount"]').value = amount.toFixed(2);
+
+        calculateTotal();
+    }
+
+    function calculateTotal() {
+        let total = 0;
+
+        document.querySelectorAll('[name$=".Amount"]').forEach(a => {
+            total += parseFloat(a.value) || 0;
+        });
+
+        document.getElementById("totalAmount").value = total.toFixed(2);
+    }
+
+    function removeRow(btn) {
+        btn.closest("tr").remove();
+        calculateTotal();
     }
     function validateBillForm() {
     const rows = document.querySelectorAll("#itemBody tr");
@@ -455,37 +564,42 @@
     }
 
     for (let i = 0; i < rows.length; i++) {
-        const qtyInput = rows[i].children[1].querySelector("input");
-        const rateInput = rows[i].children[2].querySelector("input");
-        const discInput = rows[i].children[3].querySelector("input");
+
+        const agencySelect = rows[i].children[1].querySelector("select");
+        const qtyInput = rows[i].children[2].querySelector("input");
+        const rateInput = rows[i].children[3].querySelector("input");
+        const discInput = rows[i].children[4].querySelector("input");
+
+        // if (!agencySelect.value) {
+        //     alert(`Row ${i + 1}: Please select an agency.`);
+        //     agencySelect.focus();
+        //     return false;
+        // }
 
         const qty = parseFloat(qtyInput.value);
         const rate = parseFloat(rateInput.value);
         const disc = parseFloat(discInput.value) || 0;
 
-        // Quantity validation
         if (!qty || qty <= 0) {
-            alert(`Row ${i + 1}: Quantity is mandatory and must be greater than 0.`);
+            alert(`Row ${i + 1}: Quantity must be greater than 0.`);
             qtyInput.focus();
             return false;
         }
 
-        // Rate validation (mandatory, no max)
         if (isNaN(rate)) {
             alert(`Row ${i + 1}: Rate is mandatory.`);
             rateInput.focus();
             return false;
         }
 
-        // Discount validation
         if (disc < 0 || disc > 100) {
-            alert(`Row ${i + 1}: Discount percentage must be between 0 and 100.`);
+            alert(`Row ${i + 1}: Discount must be between 0 and 100.`);
             discInput.focus();
             return false;
         }
     }
 
-    return true; // allow submit
+    return true;
 }
 
 </script>

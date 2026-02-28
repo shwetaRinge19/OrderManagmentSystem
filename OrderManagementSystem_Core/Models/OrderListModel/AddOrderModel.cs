@@ -13,8 +13,7 @@ namespace OrderManagementSystem_Core.Models.OrderListModel
 
         public DateTime? BillDate { get; set; }
 
-        public int? AgencyId { get; set; }
-
+        public string? CustomerName { get; set; }
         public decimal? TotalAmount { get; set; }
 
         public DateTime? CreatedOn { get; set; }

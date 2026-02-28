@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using OrderManagementSystem.Entities;
 using OrderManagementSystem_Core.Models.Common;
+using OrderManagementSystem_DAL.Entities;
 using OrderManagementSystem_DAL.Repository.Interface;
 using System;
 using System.Collections.Generic;

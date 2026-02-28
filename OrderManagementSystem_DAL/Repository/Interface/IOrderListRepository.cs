@@ -11,9 +11,11 @@ namespace OrderManagementSystem_DAL.Repository.Interface
     public interface IOrderListRepository
     {
         Task<ResponseModel> GetAllAgencies();
-        Task<ResponseModel> GetAllOrderDataByAgency(int agencyId,
+
+        Task<ResponseModel> GetAllOrderData(
             DateTime? fromDate,
             DateTime? toDate);
+        Task<ResponseModel> GetOrderById(int id);
         Task<ResponseModel> CreateOrder(AddOrderModel model);
         Task<string> GenerateBillNo();
     }

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace OrderManagementSystem.Entities;
+namespace OrderManagementSystem_DAL.Entities;
 
 public partial class Agency
 {
@@ -9,5 +9,5 @@ public partial class Agency
 
     public string? AgencyName { get; set; }
 
-    public virtual ICollection<SalesMaster> SalesMasters { get; set; } = new List<SalesMaster>();
+    public virtual ICollection<SalesDetail> SalesDetails { get; set; } = new List<SalesDetail>();
 }

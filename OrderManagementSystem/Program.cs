@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using OrderManagementSystem.Entities;
+using OrderManagementSystem;
 using OrderManagementSystem_DAL.DependencyInjection;
+using OrderManagementSystem_DAL.Entities;
 using Rotativa.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);

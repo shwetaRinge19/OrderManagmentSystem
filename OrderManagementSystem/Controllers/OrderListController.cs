@@ -66,6 +66,17 @@ namespace OrderManagementSystem.Controllers
             return View(orders);
         }
 
+        // OrderListController.cs
+        [HttpGet]
+        public async Task<IActionResult> GetItemByBarcode(string barcode)
+        {
+            var result = await _orderListRepository.GetItemByBarcode(barcode);
+
+            if (!result.IsSuccess)
+                return NotFound(new { message = result.Message });
+
+            return Json(result.Data);
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -159,8 +170,6 @@ namespace OrderManagementSystem.Controllers
                     "--footer-spacing 5"
             };
         }
-
-
 
 
     }

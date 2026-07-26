@@ -9,5 +9,7 @@ public partial class Agency
 
     public string? AgencyName { get; set; }
 
+    public virtual ICollection<Item> Items { get; set; } = new List<Item>();
+
     public virtual ICollection<SalesDetail> SalesDetails { get; set; } = new List<SalesDetail>();
 }

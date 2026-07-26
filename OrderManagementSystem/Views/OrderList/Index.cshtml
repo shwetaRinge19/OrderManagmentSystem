@@ -58,7 +58,8 @@
             <!-- DATE FILTERS -->
             <div class="col-md-2">
                 <label class="form-label small fw-semibold">From Date</label>
-                <input type="date"
+                <input type="date"  
+                       id="fromDate"
                        name="fromDate"
                        value="@ViewBag.FromDate"
                        class="form-control form-control-sm" />
@@ -67,20 +68,27 @@
             <div class="col-md-2">
                 <label class="form-label small fw-semibold">To Date</label>
                 <input type="date"
+                       id="toDate"
                        name="toDate"
                        value="@ViewBag.ToDate"
                        class="form-control form-control-sm" />
             </div>
 
-            <!-- SEARCH -->
-            <div class="col-md-2">
-                <button class="btn btn-primary btn-sm w-100">
+            <!-- SEARCH + RESET -->
+            <div class="col-md-3 d-flex">
+                <button class="btn btn-primary btn-sm w-100 me-2">
                     <i class="bi bi-search me-1"></i> Search
                 </button>
+
+                <a class="btn btn-outline-secondary btn-sm"
+                   href="@Url.Action("Index","OrderList")"
+                   title="Reset filters and show all">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                </a>
             </div>
 
             <!-- RIGHT ACTIONS -->
-            <div class="col-md-6 text-end">
+            <div class="col-md-5 text-end">
                 <div class="btn-group" role="group">
 
                     <a class="btn btn-outline-danger btn-sm px-3"
@@ -107,10 +115,16 @@
                         <i class="bi bi-building me-1"></i> Add Agency
                     </button>
 
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#itemModal">
+        <i class="bi bi-box-seam me-1"></i> Register Item (Ctrl+I)
+    </button>
+
                 </div>
             </div>
 
         </div>
+
+                    @await Html.PartialAsync("_ItemMasterModal", new OrderManagementSystem_Core.Models.ItemCreateModel())
 
     </div>
 </form>
@@ -174,35 +188,78 @@
                     <tr class="collapse bg-light" id="d_@order.Id">
                         <td colspan="4">
                             <table class="table table-sm mt-2">
-                                <thead class="table-warning text-center">
-                                    <tr>
-                                        <th>Item</th>
-                                        <th width="160">Agency</th>
-                                        <th>Qty</th>
-                                        <th>Rate</th>
-                                        <th>Disc %</th>
-                                        <th>Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="text-center">
-                                    @foreach (var item in order.SalesDetail)
-                                    {
-                                        <tr>
-                                            <td>@item.ItemName</td>
-                                            <td>@item.AgencyName</td>
-                                            <td>@item.Quantity</td>
-                                            <td>@item.Rate</td>
-                                            <td>@item.DiscountRate</td>
-                                            <td>@item.Amount</td>
-                                        </tr>
-                                    }
-                                </tbody>
+                                <thead class="table-light">
+    <tr>
+        <th width="140">Barcode</th>
+        <th width="150">Item</th>
+        <th width="160">Agency</th>
+        <th width="80">Qty</th>
+        <th width="100">Rate</th>
+        <th width="90">Disc %</th>
+        <th width="110">Amount</th>
+        <th width="40"></th>
+    </tr>
+</thead>
+
+<tbody id="itemBody">
+    <tr>
+        <td>
+           <!-- Bill modal barcode input -->
+<input name="SalesDetail[0].Barcode"
+       class="form-control form-control-sm barcode-input"
+       data-mode="lookup"
+       placeholder="Scan..."
+       autocomplete="off"
+       onkeydown="onBarcodeKeydown(event, this)" />
+                   <!-- Register Item modal barcode input (in _ItemMasterModal) -->
+<input name="Barcode"
+       class="form-control form-control-sm barcode-input"
+       data-mode="register"
+       placeholder="Scan barcode to assign..."
+       autocomplete="off"
+       onkeydown="onBarcodeKeydown(event, this)" />
+        </td>
+        <td>
+            <input name="SalesDetail[0].ItemName"
+                   class="form-control form-control-sm" required />
+        </td>
+        <td>
+            <select name="SalesDetail[0].AgencyId" class="form-select form-select-sm">
+                <option value="">Select</option>
+                @foreach (var agency in ViewBag.Agencies)
+                {
+                    <option value="@agency.Id">@agency.AgencyName</option>
+                }
+            </select>
+        </td>
+        <td>
+            <input name="SalesDetail[0].Quantity" min="1" type="number"
+                   class="form-control form-control-sm" oninput="calc(this)" required />
+        </td>
+        <td>
+            <input name="SalesDetail[0].Rate" min="0" type="number" step="0.01"
+                   class="form-control form-control-sm" oninput="calc(this)" required />
+        </td>
+        <td>
+            <input name="SalesDetail[0].DiscountRate" type="number" step="0.01" min="0" max="100"
+                   class="form-control form-control-sm" oninput="calc(this)" />
+        </td>
+        <td>
+            <input name="SalesDetail[0].Amount" class="form-control form-control-sm" readonly />
+        </td>
+        <td>
+            <button type="button" class="btn btn-sm btn-danger" onclick="removeRow(this)">✕</button>
+        </td>
+    </tr>
+</tbody>
                             </table>
                         </td>
                     </tr>
                 }
             </tbody>
         </table>
+
+            
     }
     else if (ViewBag.SelectedAgencyId != null)
     {
@@ -297,8 +354,23 @@
 </thead>
 
 
-                            <tbody id="itemBody">
+                            <tbody id="billItemBody">
                                 <tr>
+<td>
+    <div class="input-group input-group-sm">
+        <input name="SalesDetail[0].Barcode"
+               class="form-control form-control-sm barcode-input"
+               data-mode="lookup"
+               placeholder="Scan..."
+               autocomplete="off"
+               onkeydown="onBarcodeKeydown(event, this)" />
+        <button type="button" class="btn btn-outline-secondary"
+                onclick="openCameraScanner('bill', this.previousElementSibling)">
+            <i class="bi bi-camera"></i>
+        </button>
+    </div>
+    <input type="hidden" name="SalesDetail[0].ItemId" />
+</td>
     <td>
         <input name="SalesDetail[0].ItemName"
                class="form-control form-control-sm" required />
@@ -373,13 +445,39 @@
 
                     </div>
 
-                    <div class="mt-3">
+                    @* <div class="mt-3">
                         <button type="button"
                                 class="btn btn-outline-primary btn-sm"
                                 onclick="addRow()">
                             + Add Item
                         </button>
-                    </div>
+
+                    </div> *@
+                    <div class="mt-3 d-flex gap-2">
+    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addRow()">
+        + Add Item
+    </button>
+    @* <button type="button" class="btn btn-outline-success btn-sm" onclick="openCameraScanner()">
+        <i class="bi bi-upc-scan me-1"></i> Scan with Camera
+    </button> *@
+
+</div>
+
+<!-- Camera scanner modal -->
+<div class="modal fade" id="cameraModal" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title">Scan Barcode</h6>
+                <button class="btn-close" data-bs-dismiss="modal" onclick="stopCameraScanner()"></button>
+            </div>
+            <div class="modal-body">
+                <div id="cameraReader" style="width: 100%;"></div>
+                <small class="text-muted d-block mt-2">Point camera at barcode. A new row is added for each scan.</small>
+            </div>
+        </div>
+    </div>
+</div>
 
 
                 </div>
@@ -421,6 +519,9 @@
 <input type="hidden" id="billStatus" value="@TempData["BillStatus"]" />
 <input type="hidden" id="billMessage" value="@TempData["BillMessage"]" />
 
+@* <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script> *@
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
 @section Scripts {
 <script>
 
@@ -459,68 +560,361 @@
 }
 
     function addRow() {
-        const body = document.getElementById("itemBody");
+        const body = document.getElementById("billItemBody") || document.getElementById("itemBody");
         if (!body) return;
 
         const row = document.createElement("tr");
 
+        const agencyOptionsHtml = getAgencyOptions();
+
         row.innerHTML = `
-
-            <td>
-                <input name="SalesDetail[${rowIndex}].ItemName"
-                       class="form-control form-control-sm" required />
-            </td>
-            <td>
-    <select name="SalesDetail[${rowIndex}].AgencyId"
-            class="form-select form-select-sm">
-        <option value="">Select</option>
-        ${getAgencyOptions()}
-    </select>
+<td>
+    <div class="input-group input-group-sm">
+        <input name="SalesDetail[0].Barcode"
+               class="form-control form-control-sm barcode-input"
+               data-mode="lookup"
+               placeholder="Scan..."
+               autocomplete="off"
+               onkeydown="onBarcodeKeydown(event, this)" />
+        <button type="button" class="btn btn-outline-secondary"
+                onclick="openCameraScanner('bill', this.previousElementSibling)">
+            <i class="bi bi-camera"></i>
+        </button>
+    </div>
+    <input type="hidden" name="SalesDetail[0].ItemId" />
 </td>
-            <td>
-                <input name="SalesDetail[${rowIndex}].Quantity"
-                       type="number"
-                       min="1"
-                       class="form-control form-control-sm"
-                       oninput="calc(this)"
-                       required />
-            </td>
-            <td>
-                <input name="SalesDetail[${rowIndex}].Rate"
-                       type="number"
-                       step="0.01"
-                       min="0"
-                       class="form-control form-control-sm"
-                       oninput="calc(this)"
-                       required />
-            </td>
-            <td>
-                <input name="SalesDetail[${rowIndex}].DiscountRate"
-                       type="number"
-                       step="0.01"
-                       min="0"
-                       max="100"
-                       class="form-control form-control-sm"
-                       oninput="calc(this)" />
-            </td>
+    <td>
+        <input name="SalesDetail[${rowIndex}].ItemName"
+               class="form-control form-control-sm" required />
+    </td>
+    <td>
+        <select name="SalesDetail[${rowIndex}].AgencyId" class="form-select form-select-sm">
+            <option value="">Select</option>
+            ${agencyOptionsHtml}
+        </select>
+    </td>
+    <td>
+        <input name="SalesDetail[${rowIndex}].Quantity" type="number" min="1"
+               class="form-control form-control-sm" oninput="calc(this)" required />
+    </td>
+    <td>
+        <input name="SalesDetail[${rowIndex}].Rate" type="number" step="0.01" min="0"
+               class="form-control form-control-sm" oninput="calc(this)" required />
+    </td>
+    <td>
+        <input name="SalesDetail[${rowIndex}].DiscountRate" type="number" step="0.01" min="0" max="100"
+               class="form-control form-control-sm" oninput="calc(this)" />
+    </td>
+    <td>
+        <input name="SalesDetail[${rowIndex}].Amount" class="form-control form-control-sm" readonly />
+    </td>
+    <td>
+        <button type="button" class="btn btn-sm btn-danger" onclick="removeRow(this)">✕</button>
+    </td>
+`;
 
-            <td>
-                <input name="SalesDetail[${rowIndex}].Amount"
-                       class="form-control form-control-sm"
-                       readonly />
-            </td>
-            <td>
-                <button type="button"
-                        class="btn btn-sm btn-danger"
-                        onclick="removeRow(this)">
-                    ✕
-                </button>
-            </td>
-        `;
-
+        // append once
         body.appendChild(row);
+
+        // auto-focus the new row's barcode field for continuous scanning
+        row.querySelector('.barcode-input')?.focus();
+
         rowIndex++;
     }
+
+    // ===== Barcode → Item lookup =====
+async function lookupBarcode(barcode, row) {
+    debugger
+    if (!barcode) return;
+
+    try {
+        console.log('Lookup barcode:', barcode);
+        const res = await fetch(`/OrderList/GetItemByBarcode?barcode=${encodeURIComponent(barcode)}`);
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            alert(err.message || `No item found for barcode: ${barcode}`);
+            // row.querySelector('.barcode-input').select();
+            return;
+        }
+
+        const item = await res.json();
+        console.log('Item found:', item);
+        
+        // Get inputs - be more specific with selectors for dynamically added rows
+        const inputs = row.querySelectorAll('input[type="text"], input[type="number"], select');
+        
+        if (inputs.length > 0) {
+            // Typically: Barcode input[0], ItemName input[1], Quantity input[2], Rate input[3]
+            // For bill modal: Barcode[0], ItemName[1], Quantity[2], Rate[3], Discount[4]
+            
+            const itemNameInput = row.querySelector('input[name*="ItemName"]');
+            const rateInput = row.querySelector('input[name*="Rate"]');
+            const qtyInput = row.querySelector('input[name*="Quantity"]');
+            const agencySelect = row.querySelector('select[name*="AgencyId"]');
+            const itemIdInput = row.querySelector('input[name*="ItemId"]');
+
+            if (itemNameInput) {
+                itemNameInput.value = item.itemName || '';
+                console.log('ItemName set:', item.itemName);
+            }
+            if (rateInput) {
+                rateInput.value = item.rate ?? '';
+                console.log('Rate set:', item.rate);
+            }
+            if (agencySelect && item.agencyId) {
+                agencySelect.value = item.agencyId;
+                console.log('Agency set:', item.agencyId);
+            }
+            if (itemIdInput && item.id) {
+                itemIdInput.value = item.id;
+                console.log('ItemId set:', item.id);
+            }
+
+            // Auto-set quantity to 1 if empty
+            if (qtyInput && !qtyInput.value) {
+                qtyInput.value = 1;
+            }
+
+            // Recalculate amount
+            if (qtyInput) {
+                calc(qtyInput);
+                qtyInput.focus();
+                qtyInput.select();
+            }
+        }
+    } catch (e) {
+        console.error('Lookup error:', e);
+        alert("Error looking up barcode. Please try again.");
+    }
+}
+
+// Hardware scanner: Enter key fires lookup for that row
+function onBarcodeKeydown(event, input) {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+
+    const mode = input.dataset.mode;
+
+    if (mode === 'register') {
+        // Item Register modal: just accept the scanned code as-is.
+        // No lookup — this barcode is being newly assigned.
+        input.value = input.value.trim();
+        input.nextElementSibling?.focus(); // move to next field, e.g. Item Name
+        return;
+    }
+
+    // default = Bill modal: look up an existing item
+    const row = input.closest('tr');
+    lookupBarcode(input.value.trim(), row);
+}
+// ===== Camera scanner (mode-aware) =====
+let html5QrCode = null;
+let scanTimeoutId = null;
+let scannerMode = 'bill'; // 'bill' | 'register'
+let scannerTargetInput = null; // used only in 'register' mode
+const SCAN_TIMEOUT_MS = 10000;
+
+// mode = 'bill'    -> looks up item, adds a bill row (POS-style)
+// mode = 'register' -> just writes the decoded code into the given barcode field
+function openCameraScanner(mode = 'bill', targetInputEl = null) {
+    scannerMode = mode;
+    scannerTargetInput = targetInputEl;
+
+        const modalEl = document.getElementById('cameraModal');
+    if (!modalEl) { alert('Camera modal not found'); return; }
+
+    // Move the modal to the body root so it isn't trapped inside
+    // billModal's DOM tree (a nested modal can otherwise fail to render).
+    if (modalEl.parentElement !== document.body) {
+        document.body.appendChild(modalEl);
+    }
+
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+
+    modalEl.addEventListener('shown.bs.modal', function handler() {
+        modalEl.removeEventListener('shown.bs.modal', handler);
+
+        // let Bootstrap's fade transition fully settle before measuring the container
+        setTimeout(() => {
+            try {
+                html5QrCode = new Html5Qrcode("cameraReader", { verbose: true }); // verbose logs decode attempts to console
+
+                html5QrCode.start(
+                    { facingMode: "environment" },
+                    {
+                        fps: 10,
+                        // NOTE: no `aspectRatio` — let the camera use its native stream shape.
+                        // Forcing 16:9 on a camera that streams 4:3 (very common on laptops/webcams)
+                        // is what caused the letterboxing / misaligned box you saw.
+                        qrbox: (viewfinderWidth, viewfinderHeight) => {
+                            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                            const boxWidth = Math.floor(minEdge * 0.9);
+                            const boxHeight = Math.floor(boxWidth * 0.45); // wide rectangle for 1D barcodes
+                            return { width: boxWidth, height: boxHeight };
+                        },
+                        formatsToSupport: mode === 'register'
+                            ? [
+                                Html5QrcodeSupportedFormats.EAN_13,
+                                Html5QrcodeSupportedFormats.UPC_A,
+                                Html5QrcodeSupportedFormats.UPC_E,
+                                Html5QrcodeSupportedFormats.EAN_8,
+                                Html5QrcodeSupportedFormats.CODE_128,
+                                Html5QrcodeSupportedFormats.CODE_39
+                            ]
+                            : [
+                                Html5QrcodeSupportedFormats.EAN_13,
+                                Html5QrcodeSupportedFormats.CODE_128,
+                                Html5QrcodeSupportedFormats.UPC_A,
+                                Html5QrcodeSupportedFormats.UPC_E,
+                                Html5QrcodeSupportedFormats.EAN_8,
+                                Html5QrcodeSupportedFormats.CODE_39
+                            ],
+                            experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true   // <-- add this
+        }
+                    },
+                    onScanSuccess,
+                    (errorMessage) => { /* per-frame decode miss, expected constantly while aiming */ }
+                ).then(() => {
+                    startScanTimeout();
+                }).catch(err => {
+                    console.error('Camera start error:', err);
+                    alert('Could not start camera scanner:\n' + err.message);
+                    closeCameraModal();
+                });
+            } catch (ex) {
+                console.error('Scanner init error:', ex);
+                alert('Camera scanner initialization failed: ' + ex.message);
+            }
+        }, 250); // give the modal fade-in time to finish sizing #cameraReader
+    }, { once: true });
+}
+
+function startScanTimeout() {
+    clearScanTimeout();
+    scanTimeoutId = setTimeout(() => {
+        stopCameraScanner();
+        closeCameraModal();
+        alert("No barcode detected within 10 seconds. Please try again.");
+    }, SCAN_TIMEOUT_MS);
+}
+
+function clearScanTimeout() {
+    if (scanTimeoutId) {
+        clearTimeout(scanTimeoutId);
+        scanTimeoutId = null;
+    }
+}
+
+// Looks up an item by barcode. Returns { ok: true, item } or { ok: false, message }.
+// Never touches the DOM — just fetches and reports.
+async function fetchItemByBarcode(barcode) {
+    if (!barcode) return { ok: false, message: 'Barcode is required.' };
+
+    try {
+        const res = await fetch(`/OrderList/GetItemByBarcode?barcode=${encodeURIComponent(barcode)}`);
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            return { ok: false, message: err.message || `No item found for barcode: ${barcode}` };
+        }
+
+        const item = await res.json();
+        return { ok: true, item };
+    } catch (e) {
+        console.error('Lookup error:', e);
+        return { ok: false, message: 'Error looking up barcode. Please try again.' };
+    }
+}
+
+// Fills an existing row's fields from an item object. Assumes the row already exists.
+function populateRowWithItem(row, item) {
+    const itemNameInput = row.querySelector('input[name*="ItemName"]');
+    const rateInput = row.querySelector('input[name*="Rate"]');
+    const qtyInput = row.querySelector('input[name*="Quantity"]');
+    const agencySelect = row.querySelector('select[name*="AgencyId"]');
+    const itemIdInput = row.querySelector('input[name*="ItemId"]');
+
+    if (itemNameInput) itemNameInput.value = item.itemName || '';
+    if (rateInput) rateInput.value = item.rate ?? '';
+    if (agencySelect && item.agencyId) agencySelect.value = item.agencyId;
+    if (itemIdInput && item.id) itemIdInput.value = item.id;
+
+    if (qtyInput && !qtyInput.value) qtyInput.value = 1;
+    if (qtyInput) {
+        calc(qtyInput);
+        qtyInput.focus();
+        qtyInput.select();
+    }
+}
+
+
+let isProcessingScan = false; // re-entrancy guard
+
+async function onScanSuccess(decodedText) {
+    if (isProcessingScan) return; // a scan is already being handled — ignore this duplicate trigger
+    isProcessingScan = true;
+    clearScanTimeout();
+    if (!html5QrCode) { isProcessingScan = false; return; }
+    try { await html5QrCode.pause(true); } catch (e) { /* ignore */ }
+    const code = decodedText?.trim();
+    console.log('DECODED:', code, 'mode:', scannerMode);
+    try {
+        if (scannerMode === 'register') {
+            if (scannerTargetInput) {
+                scannerTargetInput.value = code;
+                scannerTargetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                document.getElementById('itemNameInput')?.focus(); // <-- changed from nextElementSibling?.focus()
+            }
+            stopCameraScanner();
+            closeCameraModal();
+            return;
+        }
+        const result = await fetchItemByBarcode(code);
+        if (!result.ok) {
+            alert(result.message || `No item found for barcode: ${code}`);
+            try {
+                await html5QrCode.resume();
+                startScanTimeout();
+            } catch (e) {
+                stopCameraScanner();
+                closeCameraModal();
+            }
+            return;
+        }
+        addRow();
+        const rows = document.querySelectorAll("#billItemBody tr");
+        const newRow = rows[rows.length - 1];
+        const barcodeInput = newRow.querySelector('.barcode-input');
+        if (barcodeInput) barcodeInput.value = code;
+        populateRowWithItem(newRow, result.item);
+        stopCameraScanner();
+        closeCameraModal();
+    } finally {
+        isProcessingScan = false; // release the guard once this scan is fully handled
+    }
+}
+
+function closeCameraModal() {
+    const modalInstance = bootstrap.Modal.getInstance(document.getElementById('cameraModal'));
+    if (modalInstance) modalInstance.hide();
+}
+
+function stopCameraScanner() {
+    clearScanTimeout();
+    isProcessingScan = false; // reset guard
+    if (html5QrCode) {
+        const instance = html5QrCode;
+        html5QrCode = null;
+        instance.stop().then(() => instance.clear()).catch(() => {});
+    }
+}
+
+document.getElementById('cameraModal')?.addEventListener('hidden.bs.modal', function () {
+    stopCameraScanner();
+});
 
     function calc(el) {
         const row = el.closest("tr");

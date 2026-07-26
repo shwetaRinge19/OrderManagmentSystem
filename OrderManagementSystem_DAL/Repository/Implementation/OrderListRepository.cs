@@ -155,51 +155,272 @@ namespace OrderManagementSystem_DAL.Repository.Implementation
         }
 
         // 🔹 Create Order (Bill + Items)
+        //public async Task<ResponseModel> CreateOrder(AddOrderModel model)
+        //{
+        //    var response = new ResponseModel();
+
+        //    try
+        //    {
+        //        if (model.SalesDetail == null || !model.SalesDetail.Any())
+        //        {
+        //            response.IsSuccess = false;
+        //            response.Message = "At least one item is required.";
+        //            return response;
+        //        }
+
+        //        var salesMaster = new SalesMaster
+        //        {
+        //            BillNo = model.BillNo,
+        //            BillDate = model.BillDate ?? DateTime.Now,
+        //            CustomerName = model.CustomerName,
+        //            CreatedOn = DateTime.Now,
+        //            TotalAmount = model.SalesDetail.Sum(x =>
+        //                (x.Quantity ?? 0) * (x.Rate ?? 0) - (x.DiscountRate ?? 0))
+        //        };
+
+        //        _context.SalesMasters.Add(salesMaster);
+        //        await _context.SaveChangesAsync();
+
+        //        foreach (var item in model.SalesDetail)
+        //        {
+        //            _context.SalesDetails.Add(new Entities.SalesDetail
+        //            {
+        //                SalesId = salesMaster.Id,
+        //                AgencyId = item.AgencyId,
+        //                ItemName = item.ItemName,
+        //                Quantity = item.Quantity,
+        //                Rate = item.Rate,
+        //                DiscountRate = item.DiscountRate,
+        //                Amount = (item.Quantity ?? 0) * (item.Rate ?? 0)
+        //                         - (item.DiscountRate ?? 0)
+        //            });
+        //        }
+
+        //        await _context.SaveChangesAsync();
+
+        //        response.IsSuccess = true;
+        //        response.Message = "Bill created successfully.";
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        response.IsSuccess = false;
+        //        response.Message = ex.Message;
+        //    }
+
+        //    return response;
+        //}
+
         public async Task<ResponseModel> CreateOrder(AddOrderModel model)
         {
             var response = new ResponseModel();
 
+            if (model.SalesDetail == null || !model.SalesDetail.Any())
+            {
+                response.IsSuccess = false;
+                response.Message = "At least one item is required.";
+                return response;
+            }
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
             try
             {
-                if (model.SalesDetail == null || !model.SalesDetail.Any())
+                // =========================================================
+                // 1. Validate & atomically deduct stock for each scanned/selected item
+                //    (skips lines where no ItemId was set, e.g. manual free-text entries)
+                // =========================================================
+                foreach (var item in model.SalesDetail.Where(x => x.ItemId.HasValue))
                 {
-                    response.IsSuccess = false;
-                    response.Message = "At least one item is required.";
-                    return response;
+                    var qty = item.Quantity ?? 0;
+
+                    if (qty <= 0)
+                    {
+                        response.IsSuccess = false;
+                        response.Message = $"Invalid quantity for item '{item.ItemName}'.";
+                        await transaction.RollbackAsync();
+                        return response;
+                    }
+
+                    var affectedRows = await _context.Database.ExecuteSqlInterpolatedAsync($@"
+                UPDATE Items
+                SET CurrentStock = CurrentStock - {qty}
+                WHERE Id = {item.ItemId} AND CurrentStock >= {qty}");
+
+                    if (affectedRows == 0)
+                    {
+                        var current = await _context.Items
+                            .Where(x => x.Id == item.ItemId)
+                            .Select(x => new { x.ItemName, x.CurrentStock })
+                            .FirstOrDefaultAsync();
+
+                        response.IsSuccess = false;
+                        response.Message = current != null
+                            ? $"Insufficient stock for '{current.ItemName}'. Available: {current.CurrentStock}, requested: {qty}."
+                            : $"Item not found for '{item.ItemName}'.";
+
+                        await transaction.RollbackAsync();
+                        return response;
+                    }
                 }
 
+                // =========================================================
+                // 2. Generate bill number safely under lock (inside this same transaction)
+                // =========================================================
+                var billNo = await GenerateBillNoInternal();
+
+                // =========================================================
+                // 3. Create the bill header
+                // =========================================================
                 var salesMaster = new SalesMaster
                 {
-                    BillNo = model.BillNo,
+                    BillNo = billNo,
                     BillDate = model.BillDate ?? DateTime.Now,
                     CustomerName = model.CustomerName,
                     CreatedOn = DateTime.Now,
                     TotalAmount = model.SalesDetail.Sum(x =>
-                        (x.Quantity ?? 0) * (x.Rate ?? 0) - (x.DiscountRate ?? 0))
+                        (x.Quantity ?? 0) * (x.Rate ?? 0) * (1 - (x.DiscountRate ?? 0) / 100m))
                 };
 
                 _context.SalesMasters.Add(salesMaster);
                 await _context.SaveChangesAsync();
 
+                // =========================================================
+                // 4. Create line items + stock transaction log entries
+                // =========================================================
                 foreach (var item in model.SalesDetail)
                 {
+                    var qty = item.Quantity ?? 0;
+                    var rate = item.Rate ?? 0;
+                    var discount = item.DiscountRate ?? 0;
+                    var amount = qty * rate * (1 - discount / 100m);
+
                     _context.SalesDetails.Add(new Entities.SalesDetail
                     {
                         SalesId = salesMaster.Id,
+                        ItemId = item.ItemId,
+                        Barcode = item.Barcode,
                         AgencyId = item.AgencyId,
                         ItemName = item.ItemName,
                         Quantity = item.Quantity,
                         Rate = item.Rate,
                         DiscountRate = item.DiscountRate,
-                        Amount = (item.Quantity ?? 0) * (item.Rate ?? 0)
-                                 - (item.DiscountRate ?? 0)
+                        Amount = amount
                     });
+
+                    if (item.ItemId.HasValue)
+                    {
+                        _context.StockTransactions.Add(new StockTransaction
+                        {
+                            ItemId = item.ItemId.Value,
+                            TransactionType = "SALE",
+                            Quantity = qty,
+                            ReferenceId = salesMaster.Id,
+                            Notes = $"Sold via Bill {billNo}",
+                            CreatedOn = DateTime.Now
+                        });
+                    }
                 }
 
                 await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
 
                 response.IsSuccess = true;
-                response.Message = "Bill created successfully.";
+                response.Message = $"Bill {billNo} created successfully.";
+                response.Data = new { BillNo = billNo, salesMaster.Id };
+            }
+            catch (DbUpdateException ex) when (ex.InnerException?.Message?.Contains("UQ_SalesMaster_BillNo") == true)
+            {
+                await transaction.RollbackAsync();
+                response.IsSuccess = false;
+                response.Message = "Bill number conflict — please try saving again.";
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                response.IsSuccess = false;
+                response.Message = ex.Message;
+            }
+
+            return response;
+        }
+
+        // =========================================================
+        // Bill number generation — public preview version (for GET/display only)
+        // =========================================================
+        public async Task<string> GenerateBillNo()
+        {
+            var lastBill = await _context.SalesMasters
+                .OrderByDescending(x => x.Id)
+                .Select(x => x.BillNo)
+                .FirstOrDefaultAsync();
+
+            return BuildNextBillNo(lastBill);
+        }
+
+        // =========================================================
+        // Bill number generation — internal, locked version (used inside CreateOrder's transaction)
+        // =========================================================
+        private async Task<string> GenerateBillNoInternal()
+        {
+            var lastBill = await _context.SalesMasters
+                .FromSqlRaw(@"
+            SELECT TOP 1 * FROM SalesMaster WITH (UPDLOCK, HOLDLOCK)
+            ORDER BY Id DESC")
+                .Select(x => x.BillNo)
+                .FirstOrDefaultAsync();
+
+            return BuildNextBillNo(lastBill);
+        }
+
+        // Shared parsing/formatting logic
+        private string BuildNextBillNo(string lastBillNo)
+        {
+            if (string.IsNullOrWhiteSpace(lastBillNo))
+                return "BILL-0001";
+
+            var parts = lastBillNo.Split('-');
+
+            // Defensive: if format is ever unexpected, don't crash bill creation
+            if (parts.Length < 2 || !int.TryParse(parts[1], out var lastNumber))
+                return "BILL-0001";
+
+            return $"BILL-{(lastNumber + 1):D4}";
+        }
+
+        // OrderListRepository.cs
+        public async Task<ResponseModel> GetItemByBarcode(string barcode)
+        {
+            var response = new ResponseModel();
+
+            try
+            {
+                if (string.IsNullOrWhiteSpace(barcode))
+                {
+                    response.IsSuccess = false;
+                    response.Message = "Barcode is required.";
+                    return response;
+                }
+
+                var item = await _context.Items
+                    .Where(x => x.Barcode == barcode.Trim() && x.IsActive == true)
+                    .Select(x => new
+                    {
+                        x.Id,
+                        x.ItemName,
+                        x.Rate,
+                        x.AgencyId
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (item == null)
+                {
+                    response.IsSuccess = false;
+                    response.Message = $"No item found for barcode '{barcode}'.";
+                    return response;
+                }
+
+                response.IsSuccess = true;
+                response.Data = item;
             }
             catch (Exception ex)
             {
@@ -209,20 +430,5 @@ namespace OrderManagementSystem_DAL.Repository.Implementation
 
             return response;
         }
-        public async Task<string> GenerateBillNo()
-        {
-            var lastBill = await _context.SalesMasters
-                .OrderByDescending(x => x.Id)
-                .Select(x => x.BillNo)
-                .FirstOrDefaultAsync();
-
-            if (string.IsNullOrEmpty(lastBill))
-                return "BILL-0001";
-
-            int lastNumber = int.Parse(lastBill.Split('-')[1]);
-            return $"BILL-{(lastNumber + 1):D4}";
-        }
-
-
     }
 }

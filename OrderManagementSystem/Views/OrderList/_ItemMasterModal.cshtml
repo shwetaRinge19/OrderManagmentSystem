@@ -1,0 +1,63 @@
+@model OrderManagementSystem_Core.Models.ItemCreateModel
+
+<div class="modal fade" id="itemModal" tabindex="-1">
+    <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-controller="Item" asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="modal-header">
+                    <h6 class="modal-title">Add / Register Item</h6>
+                    <button class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="mb-2">
+                        <label class="form-label">Barcode</label>
+                        <div class="input-group">
+                            <input name="Barcode" id="itemBarcode" class="form-control barcode-input"
+                                   data-mode="register" placeholder="Scan barcode..."
+                                   autocomplete="off" onkeydown="onBarcodeKeydown(event, this)" />
+                            <button type="button" class="btn btn-outline-secondary" title="Scan with camera"
+                                    onclick="openCameraScanner('register', document.getElementById('itemBarcode'))">
+                                <i class="fa carousel-fade"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Item Name</label>
+                        <input name="ItemName" id="itemNameInput" class="form-control" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Agency</label>
+                        <select name="AgencyId" class="form-select">
+                            <option value="">Select</option>
+                            @{
+                                var agencies = ViewBag.Agencies as List<OrderManagementSystem_Core.Models.OrderListModel.ListAgencyModel>;
+                                if (agencies != null)
+                                {
+                                    foreach (var a in agencies)
+                                    {
+                                        <option value="@a.Id">@a.AgencyName</option>
+                                    }
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Rate</label>
+                        <input name="Rate" class="form-control" type="number" step="0.01" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Initial Stock</label>
+                        <input name="InitialStock" class="form-control" type="number" value="0" />
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-primary btn-sm">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

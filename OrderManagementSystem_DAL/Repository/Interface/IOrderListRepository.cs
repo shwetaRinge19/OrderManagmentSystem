@@ -18,5 +18,6 @@ namespace OrderManagementSystem_DAL.Repository.Interface
         Task<ResponseModel> GetOrderById(int id);
         Task<ResponseModel> CreateOrder(AddOrderModel model);
         Task<string> GenerateBillNo();
+        Task<ResponseModel> GetItemByBarcode(string barcode);
     }
 }

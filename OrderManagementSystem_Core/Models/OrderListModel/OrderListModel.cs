@@ -39,5 +39,9 @@ namespace OrderManagementSystem_Core.Models.OrderListModel
         public decimal? DiscountRate { get; set; }
 
         public decimal? Amount { get; set; }
+
+        // Added to match DAL SalesDetail entity and repository usage
+        public int? ItemId { get; set; }
+        public string? Barcode { get; set; }
     }
 }
